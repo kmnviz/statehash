@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API docs — statehash.io</title>
+    <meta
+      name="description"
+      content="statehash.io HTTP API reference: anchoring JSON, looking up anchors, and verifying commitments on Base."
+    />
+    <meta name="theme-color" content="#0a0b0f" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <!-- ================================================================ nav -->
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>statehash<span class="brand-dot">.io</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="/#audience">Who it's for</a>
+          <a href="/#how">How it works</a>
+          <a href="/#example">Example</a>
+          <a href="/docs" class="is-active">Docs</a>
+        </nav>
+        <a class="btn btn-primary btn-sm nav-cta" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">Request API key</a>
+      </div>
+    </header>
+
+    <div class="docs-shell">
+      <!-- ========================================================= sidebar -->
+      <aside class="docs-sidebar" aria-label="Docs navigation">
+        <div class="group">
+          <div class="group-title">Getting started</div>
+          <ul>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#quickstart">Quickstart</a></li>
+            <li><a href="#base-url">Base URL</a></li>
+            <li><a href="#authentication">Authentication</a></li>
+            <li><a href="#namespaces">Namespaces</a></li>
+          </ul>
+        </div>
+        <div class="group">
+          <div class="group-title">Core concepts</div>
+          <ul>
+            <li><a href="#canonicalization">Canonicalization</a></li>
+            <li><a href="#commitment-hash">Commitment hash</a></li>
+            <li><a href="#lifecycle">Anchor lifecycle</a></li>
+          </ul>
+        </div>
+        <div class="group">
+          <div class="group-title">REST API</div>
+          <ul>
+            <li><a href="#post-anchors"><code>POST</code> /v1/anchors</a></li>
+            <li><a href="#get-anchor-id"><code>GET</code> /v1/anchors/:id</a></li>
+            <li><a href="#get-anchor-ref"><code>GET</code> /v1/anchors/by-ref/:ref</a></li>
+            <li><a href="#verify">Independent verification</a></li>
+          </ul>
+        </div>
+        <div class="group">
+          <div class="group-title">Reference</div>
+          <ul>
+            <li><a href="#anchor-object">Anchor object</a></li>
+            <li><a href="#errors">Errors</a></li>
+            <li><a href="#rate-limits">Rate limits</a></li>
+            <li><a href="#changelog">Changelog</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- ============================================================ main -->
+      <main class="docs-main">
+        <span class="kicker" style="font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--accent);">API REFERENCE · v1</span>
+        <h1>statehash.io API</h1>
+        <p class="docs-lead">
+          A tiny HTTP API for anchoring arbitrary JSON on Base and looking the
+          anchors up later. No SDK. No on-chain contract calls. Just JSON in,
+          receipts out.
+        </p>
+
+        <div class="row mt-3">
+          <span class="pill pill-blue">Base mainnet · 8453</span>
+          <span class="pill pill-amber">Preview · subject to change</span>
+          <span class="pill">v1</span>
+        </div>
+
+        <!-- ============================================== introduction -->
+        <h2 id="introduction">Introduction</h2>
+        <p>
+          statehash.io produces cryptographic receipts for JSON payloads. Each
+          receipt is an <strong>anchor</strong>: a deterministic hash of your
+          payload, submitted on-chain as a Base transaction, and stored with a
+          namespace + external reference so you can look it up again later.
+        </p>
+        <p>
+          The API is intentionally small. There are exactly three verbs:
+          anchor, fetch by ID, and fetch by namespace/external_ref. Anything
+          else — verification, audit trails, long-term retention — happens off
+          our servers, using public chain data.
+        </p>
+
+        <!-- ================================================ quickstart -->
+        <h2 id="quickstart">Quickstart</h2>
+        <ol>
+          <li><a href="mailto:hello@statehash.io">Request an API key</a>. You'll be assigned a namespace.</li>
+          <li>POST your first payload to <code>/v1/anchors</code>.</li>
+          <li>Inspect the response. Follow the basescan link. You're done.</li>
+        </ol>
+
+<pre><code><span class="tok-c"># Smallest possible anchor call</span>
+<span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/anchors \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"namespace":"demo","external_ref":"hello","payload":{"msg":"hello world"}}'</span></code></pre>
+
+        <!-- ================================================== base url -->
+        <h2 id="base-url">Base URL</h2>
+<pre><code>https://api.statehash.io</code></pre>
+        <p>
+          A testnet endpoint (<code>https://api.sepolia.statehash.io</code>)
+          writes to Base Sepolia. Use it from non-production environments so
+          your demo traffic doesn't land on mainnet.
+        </p>
+
+        <!-- =========================================== authentication -->
+        <h2 id="authentication">Authentication</h2>
+        <p>
+          Every request must include an API key. Either header works:
+        </p>
+<pre><code>X-Api-Key: sk_live_...
+<span class="tok-c">or</span>
+Authorization: Bearer sk_live_...</code></pre>
+        <p>
+          API keys are scoped to a single <strong>namespace</strong>. A key can
+          only read and write anchors under its own namespace; cross-namespace
+          access is never allowed, even with a valid key.
+        </p>
+
+        <!-- =============================================== namespaces -->
+        <h2 id="namespaces">Namespaces</h2>
+        <p>
+          A namespace is a logical tenant — typically one per product or
+          environment (e.g. <code>acme-predictions</code>,
+          <code>acme-predictions-staging</code>). Namespaces are issued by us at
+          key creation and cannot be reassigned.
+        </p>
+        <p>
+          Within a namespace, <code>(namespace, external_ref)</code> is unique:
+          posting the same <code>external_ref</code> twice returns the existing
+          anchor instead of creating a new one. This makes the API idempotent
+          for retries.
+        </p>
+
+        <!-- ======================================== canonicalization -->
+        <h2 id="canonicalization">Canonicalization</h2>
+        <p>
+          Two JSON blobs that look the same but differ in key order or
+          whitespace must produce the same hash. We use a small deterministic
+          serializer with the following rules:
+        </p>
+        <ul>
+          <li>Object keys are sorted lexicographically, recursively.</li>
+          <li>No extra whitespace. No trailing newlines.</li>
+          <li>Numbers are emitted with JavaScript's default <code>Number</code> format. Integers and floats that round-trip through JSON are safe.</li>
+          <li><code>null</code>, <code>true</code>, <code>false</code> are literal.</li>
+          <li>Arrays preserve their order.</li>
+          <li>Strings are UTF-8 encoded.</li>
+        </ul>
+        <p>
+          The resulting canonical UTF-8 bytes are hashed with
+          <code>keccak256</code>. Any language with a keccak implementation can
+          reproduce it.
+        </p>
+
+        <!-- ========================================== commitment hash -->
+        <h2 id="commitment-hash">Commitment hash</h2>
+        <p>
+          The <code>commitment_hash</code> is a <code>0x</code>-prefixed,
+          lowercase hex string. It is a 32-byte keccak256 digest of the
+          canonical JSON. It is the exact bytes written as calldata to the
+          on-chain transaction.
+        </p>
+<pre><code><span class="tok-c">// Reference TypeScript</span>
+<span class="tok-k">import</span> <span class="tok-p">{</span> keccak256<span class="tok-p">,</span> stringToBytes <span class="tok-p">}</span> <span class="tok-k">from</span> <span class="tok-s">"viem"</span><span class="tok-p">;</span>
+
+<span class="tok-k">const</span> <span class="tok-v">commitment</span> <span class="tok-p">=</span> <span class="tok-f">keccak256</span><span class="tok-p">(</span><span class="tok-f">stringToBytes</span><span class="tok-p">(</span><span class="tok-f">canonicalJson</span><span class="tok-p">(</span>payload<span class="tok-p">))</span><span class="tok-p">);</span></code></pre>
+
+        <!-- ============================================== lifecycle -->
+        <h2 id="lifecycle">Anchor lifecycle</h2>
+        <ol>
+          <li><strong>accepted</strong> — request received, payload canonicalized, row inserted in our DB.</li>
+          <li><strong>pending</strong> — transaction broadcast to Base but not yet mined.</li>
+          <li><strong>confirmed</strong> — transaction mined. <code>tx_hash</code>, <code>block_number</code> are populated. This is the terminal success state.</li>
+          <li><strong>failed</strong> — submission failed. You'll see an <code>error</code> field. Safe to retry with the same <code>external_ref</code>.</li>
+        </ol>
+        <p>
+          In v1, <code>POST /v1/anchors</code> is <strong>synchronous</strong>:
+          it returns once the anchor reaches <code>confirmed</code>. Async mode
+          is on the roadmap.
+        </p>
+
+        <!-- ============================================= POST /v1/anchors -->
+        <h2 id="post-anchors">Create an anchor</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <span>/v1/anchors</span>
+        </div>
+
+        <h3>Body parameters</h3>
+        <table class="param-table">
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>namespace</code><span class="req">required</span></td>
+              <td>string</td>
+              <td>Must match the namespace bound to your API key.</td>
+            </tr>
+            <tr>
+              <td><code>external_ref</code><span class="req">required</span></td>
+              <td>string</td>
+              <td>Your ID for this anchor. Unique within the namespace; repeat calls return the existing anchor (idempotent).</td>
+            </tr>
+            <tr>
+              <td><code>payload</code><span class="req">required</span></td>
+              <td>any JSON</td>
+              <td>Arbitrary JSON. Object, array, string, number, boolean, or null. Schema is entirely up to you.</td>
+            </tr>
+            <tr>
+              <td><code>store_payload</code></td>
+              <td>boolean · default <code>true</code></td>
+              <td>If <code>false</code>, we keep only the hash and metadata. Use this for PII-heavy payloads.</td>
+            </tr>
+            <tr>
+              <td><code>metadata</code></td>
+              <td>object</td>
+              <td>Optional free-form metadata stored alongside the anchor (not hashed, not on-chain).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example request</h3>
+<pre><code><span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/anchors \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{
+    "namespace": "acme-predictions",
+    "external_ref": "game-42:home-win",
+    "payload": {
+      "match_id": "nba-2026-04-15-BOS-LAL",
+      "prediction": { "home_win": 0.63 }
+    }
+  }'</span></code></pre>
+
+        <h3>Example response</h3>
+<pre><code><span class="tok-p">{</span>
+  <span class="tok-v">"id"</span><span class="tok-p">:</span> <span class="tok-s">"anc_01JSA7K2G9Q4M8Y3H2B8D5R4Z0"</span><span class="tok-p">,</span>
+  <span class="tok-v">"namespace"</span><span class="tok-p">:</span> <span class="tok-s">"acme-predictions"</span><span class="tok-p">,</span>
+  <span class="tok-v">"external_ref"</span><span class="tok-p">:</span> <span class="tok-s">"game-42:home-win"</span><span class="tok-p">,</span>
+  <span class="tok-v">"commitment_hash"</span><span class="tok-p">:</span> <span class="tok-s">"0x7b0a4c…e91f3d"</span><span class="tok-p">,</span>
+  <span class="tok-v">"chain_id"</span><span class="tok-p">:</span> <span class="tok-n">8453</span><span class="tok-p">,</span>
+  <span class="tok-v">"tx_hash"</span><span class="tok-p">:</span> <span class="tok-s">"0x9f2a…c4d1"</span><span class="tok-p">,</span>
+  <span class="tok-v">"block_number"</span><span class="tok-p">:</span> <span class="tok-n">18421003</span><span class="tok-p">,</span>
+  <span class="tok-v">"status"</span><span class="tok-p">:</span> <span class="tok-s">"confirmed"</span><span class="tok-p">,</span>
+  <span class="tok-v">"explorer_url"</span><span class="tok-p">:</span> <span class="tok-s">"https://basescan.org/tx/0x9f2a…"</span><span class="tok-p">,</span>
+  <span class="tok-v">"created_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-04-15T19:02:14Z"</span>
+<span class="tok-p">}</span></code></pre>
+
+        <!-- ========================================= GET /v1/anchors/:id -->
+        <h2 id="get-anchor-id">Fetch by ID</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span>/v1/anchors/:id</span>
+        </div>
+        <p>
+          Returns the <a href="#anchor-object">anchor object</a> for the given
+          <code>id</code>. The anchor must belong to your namespace.
+        </p>
+<pre><code><span class="tok-k">curl</span> https://api.statehash.io/v1/anchors/anc_01JSA7K2G9Q4M8Y3H2B8D5R4Z0 \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span></code></pre>
+
+        <!-- ==================================== GET /v1/anchors/by-ref -->
+        <h2 id="get-anchor-ref">Fetch by external reference</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span>/v1/anchors/by-ref/:external_ref</span>
+        </div>
+        <p>
+          Returns the anchor under the caller's namespace whose
+          <code>external_ref</code> matches. Because <code>(namespace,
+          external_ref)</code> is unique, this is always a single-result
+          lookup.
+        </p>
+<pre><code><span class="tok-k">curl</span> https://api.statehash.io/v1/anchors/by-ref/game-42:home-win \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span></code></pre>
+
+        <!-- ============================================ verification -->
+        <h2 id="verify">Independent verification</h2>
+        <p>
+          The whole point of statehash.io is that your users don't have to
+          trust us. Given the original payload and the <code>tx_hash</code>,
+          anyone can verify the anchor in about ten lines of code:
+        </p>
+<pre><code><span class="tok-k">import</span> <span class="tok-p">{</span> createPublicClient<span class="tok-p">,</span> http<span class="tok-p">,</span> keccak256<span class="tok-p">,</span> stringToBytes <span class="tok-p">}</span> <span class="tok-k">from</span> <span class="tok-s">"viem"</span><span class="tok-p">;</span>
+<span class="tok-k">import</span> <span class="tok-p">{</span> base <span class="tok-p">}</span> <span class="tok-k">from</span> <span class="tok-s">"viem/chains"</span><span class="tok-p">;</span>
+
+<span class="tok-k">const</span> <span class="tok-v">client</span> <span class="tok-p">=</span> <span class="tok-f">createPublicClient</span><span class="tok-p">({</span> chain<span class="tok-p">:</span> base<span class="tok-p">,</span> transport<span class="tok-p">:</span> <span class="tok-f">http</span><span class="tok-p">()</span> <span class="tok-p">});</span>
+<span class="tok-k">const</span> <span class="tok-v">tx</span> <span class="tok-p">=</span> <span class="tok-k">await</span> client<span class="tok-p">.</span><span class="tok-f">getTransaction</span><span class="tok-p">({</span> hash<span class="tok-p">:</span> txHash <span class="tok-p">});</span>
+
+<span class="tok-k">const</span> <span class="tok-v">expected</span> <span class="tok-p">=</span> <span class="tok-f">keccak256</span><span class="tok-p">(</span><span class="tok-f">stringToBytes</span><span class="tok-p">(</span><span class="tok-f">canonicalJson</span><span class="tok-p">(</span>payload<span class="tok-p">)));</span>
+<span class="tok-k">const</span> <span class="tok-v">onChain</span> <span class="tok-p">=</span> tx<span class="tok-p">.</span>input<span class="tok-p">;</span> <span class="tok-c">// 0x-prefixed calldata</span>
+
+<span class="tok-f">console</span><span class="tok-p">.</span><span class="tok-f">log</span><span class="tok-p">(</span>expected <span class="tok-p">===</span> onChain <span class="tok-p">?</span> <span class="tok-s">"✓ anchored"</span> <span class="tok-p">:</span> <span class="tok-s">"✗ tampered"</span><span class="tok-p">);</span></code></pre>
+        <p>
+          You do not need statehash.io to be online for this to work. The RPC
+          node serves the transaction; you do the hashing locally.
+        </p>
+
+        <!-- ============================================ anchor object -->
+        <h2 id="anchor-object">The anchor object</h2>
+        <table class="param-table">
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>string</td><td>ULID, prefixed <code>anc_</code>.</td></tr>
+            <tr><td><code>namespace</code></td><td>string</td><td>Tenant owner of the anchor.</td></tr>
+            <tr><td><code>external_ref</code></td><td>string</td><td>Caller-provided reference.</td></tr>
+            <tr><td><code>commitment_hash</code></td><td>string</td><td><code>0x</code>-prefixed keccak256 of canonical payload.</td></tr>
+            <tr><td><code>chain_id</code></td><td>number</td><td><code>8453</code> (Base) or <code>84532</code> (Base Sepolia).</td></tr>
+            <tr><td><code>tx_hash</code></td><td>string</td><td>Transaction hash on the target chain. Present when <code>status</code> is <code>pending</code> or later.</td></tr>
+            <tr><td><code>block_number</code></td><td>number</td><td>Block that mined the tx. Present on <code>confirmed</code>.</td></tr>
+            <tr><td><code>status</code></td><td>string</td><td>One of <code>accepted</code>, <code>pending</code>, <code>confirmed</code>, <code>failed</code>.</td></tr>
+            <tr><td><code>explorer_url</code></td><td>string</td><td>Human-facing basescan URL.</td></tr>
+            <tr><td><code>payload</code></td><td>any</td><td>Original JSON, if <code>store_payload</code> wasn't set to <code>false</code>.</td></tr>
+            <tr><td><code>metadata</code></td><td>object</td><td>Free-form caller metadata. Not hashed.</td></tr>
+            <tr><td><code>created_at</code></td><td>string</td><td>ISO-8601 timestamp.</td></tr>
+          </tbody>
+        </table>
+
+        <!-- =================================================== errors -->
+        <h2 id="errors">Errors</h2>
+        <p>Errors are returned as JSON with a predictable shape:</p>
+<pre><code><span class="tok-p">{</span>
+  <span class="tok-v">"error"</span><span class="tok-p">:</span> <span class="tok-p">{</span>
+    <span class="tok-v">"code"</span><span class="tok-p">:</span> <span class="tok-s">"namespace_mismatch"</span><span class="tok-p">,</span>
+    <span class="tok-v">"message"</span><span class="tok-p">:</span> <span class="tok-s">"Namespace does not match API key."</span>
+  <span class="tok-p">}</span>
+<span class="tok-p">}</span></code></pre>
+
+        <table class="param-table">
+          <thead>
+            <tr><th>HTTP</th><th>Code</th><th>When</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>400</td><td><code>invalid_request</code></td><td>Malformed JSON or missing required field.</td></tr>
+            <tr><td>401</td><td><code>missing_api_key</code></td><td>No API key header provided.</td></tr>
+            <tr><td>403</td><td><code>invalid_api_key</code></td><td>Key not recognized.</td></tr>
+            <tr><td>403</td><td><code>namespace_mismatch</code></td><td>Key is not authorized for that namespace.</td></tr>
+            <tr><td>404</td><td><code>not_found</code></td><td>Anchor does not exist under this namespace.</td></tr>
+            <tr><td>409</td><td><code>external_ref_conflict</code></td><td>external_ref exists with a different payload hash.</td></tr>
+            <tr><td>500</td><td><code>internal_error</code></td><td>Something on our side. Retry-safe.</td></tr>
+          </tbody>
+        </table>
+
+        <!-- ============================================ rate limits -->
+        <h2 id="rate-limits">Rate limits</h2>
+        <p>
+          Preview accounts are limited to <strong>30 anchors/minute</strong>
+          and <strong>10 concurrent requests</strong>. Limits are per API key.
+          Higher limits are available on request.
+        </p>
+
+        <!-- =============================================== changelog -->
+        <h2 id="changelog">Changelog</h2>
+        <ul>
+          <li><strong>2026-04 · v1 preview</strong> — initial release: synchronous <code>POST /v1/anchors</code>, lookup by id and external_ref, Base + Base Sepolia.</li>
+        </ul>
+
+        <div class="callout callout-accent mt-4">
+          <div>
+            <strong>Need something not here?</strong>
+            Webhooks, async mode, batch anchoring, and self-hosted builds are
+            on the roadmap — email <a href="mailto:hello@statehash.io">hello@statehash.io</a> and tell us what you need.
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ============================================================ footer -->
+    <footer class="site">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>statehash<span class="brand-dot">.io</span></span>
+          </a>
+          <p class="mt-2" style="max-width: 38ch;">
+            Cryptographic receipts for your app's claims. Built on Base.
+          </p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/#how">How it works</a></li>
+            <li><a href="/#example">Live example</a></li>
+            <li><a href="/docs">API docs</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="mailto:hello@statehash.io">Contact</a></li>
+            <li><a href="/#faq">FAQ</a></li>
+            <li><a href="mailto:hello@statehash.io?subject=statehash.io%20partnership">Partnerships</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Status</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 statehash.io — preview release</span>
+        <span class="row">
+          <span class="pill pill-blue">Base · chain_id 8453</span>
+          <span class="pill pill-green">v1 preview</span>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

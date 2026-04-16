@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>statehash.io — Cryptographic receipts for your app's claims</title>
+    <meta
+      name="description"
+      content="statehash.io turns any JSON into a timestamped, on-chain receipt. Anchor once, verify forever. Built for AI agents, prediction markets, and APIs whose outputs might be disputed."
+    />
+    <meta name="theme-color" content="#0a0b0f" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/site.css" />
+
+    <meta property="og:title" content="statehash.io — Cryptographic receipts for your app's claims" />
+    <meta property="og:description" content="Anchor any JSON on Base. Prove what your app said, and when." />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <!-- ================================================================ nav -->
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>statehash<span class="brand-dot">.io</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#audience">Who it's for</a>
+          <a href="#how">How it works</a>
+          <a href="#example">Example</a>
+          <a href="#faq">FAQ</a>
+          <a href="/docs">Docs</a>
+        </nav>
+        <a class="btn btn-primary btn-sm nav-cta" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">Request API key</a>
+      </div>
+    </header>
+
+    <!-- ============================================================== hero -->
+    <section class="hero" id="top">
+      <div class="hero-inner">
+        <span class="eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          Live on Base · v1 in preview
+        </span>
+        <h1>
+          Prove what your app said.<br />
+          <span class="grad">And when it said it.</span>
+        </h1>
+        <p class="hero-lede">
+          statehash.io turns any JSON payload into a timestamped, on-chain
+          receipt. Anchor once with a single HTTP call — anyone can verify it
+          forever, without an SDK, without an account, without us.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">
+            Request an API key
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="/docs">Read the docs</a>
+        </div>
+        <div class="hero-meta">
+          <span>1 HTTP call per anchor</span>
+          <span>~2s confirmation on Base</span>
+          <span>Fully verifiable off-platform</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== problem -->
+    <section id="problem">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <span class="kicker">The problem</span>
+            <h2>Trust is asymmetric. Until it's on-chain.</h2>
+          </div>
+          <p>
+            If your app emits claims — predictions, model outputs, scores,
+            receipts — anyone can accuse you of rewriting them after the fact.
+            You can't easily prove you didn't. Logs are editable. Databases are
+            editable. A screenshot is not evidence.
+          </p>
+        </div>
+
+        <div class="demo">
+          <div class="callout callout-accent">
+            <div>
+              <strong>Without statehash.io.</strong>
+              Your service says "the model predicted X on Tuesday." The user says
+              "no it didn't." You show them your database. They shrug. You have
+              no independent witness.
+            </div>
+          </div>
+          <div class="callout callout-teal">
+            <div>
+              <strong>With statehash.io.</strong>
+              Your service anchored the JSON on Tuesday. The payload's hash is
+              in a Base transaction you don't control. Anyone can recompute the
+              hash and confirm it. Dispute closed.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================== audience -->
+    <section id="audience">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <span class="kicker">Who it's for</span>
+            <h2>Built for teams that ship outputs someone could later dispute.</h2>
+          </div>
+          <p>
+            If you send "this is what our system said" to users, partners, or
+            regulators — statehash.io is your cheapest and least-effort way to
+            prove it.
+          </p>
+        </div>
+
+        <div class="audience">
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </span>
+            <h3>AI agent platforms</h3>
+            <p>
+              Stamp every agent decision before acting on it. Prove the model
+              didn't silently change its answer between the action and the
+              audit.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+            </span>
+            <h3>Prediction markets</h3>
+            <p>
+              Commit forecasts before the event settles. Nobody can accuse you
+              of editing the call after outcomes landed — the hash was already
+              on-chain.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 14h6M9 18h4"/></svg>
+            </span>
+            <h3>AI-generated content</h3>
+            <p>
+              Every generated document, image manifest, or transcript gets a
+              tamper-evident fingerprint. Origin and timing, permanently tied.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="card-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>
+            <h3>Compliance &amp; audit</h3>
+            <p>
+              Immutable receipts for decisions that need to stand up in review
+              — KYC outcomes, risk scores, moderation calls, policy evaluations.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ how -->
+    <section id="how">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <span class="kicker">How it works</span>
+            <h2>Three steps. No SDK.</h2>
+          </div>
+          <p>
+            You send JSON. We canonicalize it, hash it, and write the hash into
+            a transaction on Base. You get an ID back. Everything else — the
+            verification, the audit trail, the paper trail — is public.
+          </p>
+        </div>
+
+        <div class="flow">
+          <div class="flow-step">
+            <span class="num">01 / POST</span>
+            <h3>Send your payload</h3>
+            <p>
+              <code>POST /v1/anchors</code> with your API key and any JSON. A
+              namespace and <code>external_ref</code> let you look it up later.
+            </p>
+          </div>
+          <div class="flow-step">
+            <span class="num">02 / Canonicalize &amp; hash</span>
+            <h3>Deterministic commitment</h3>
+            <p>
+              We serialize keys in sorted order, strip whitespace, and take
+              <code>keccak256</code> of the bytes. Same JSON always produces the
+              same 32-byte hash.
+            </p>
+          </div>
+          <div class="flow-step">
+            <span class="num">03 / Anchor on Base</span>
+            <h3>Permanent on-chain record</h3>
+            <p>
+              The hash is submitted as calldata on Base. You get back
+              <code>tx_hash</code> and a basescan link. Anyone can verify it by
+              recomputing — no statehash.io account required.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================== example -->
+    <section id="example">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <span class="kicker">Live example</span>
+            <h2>One request. One permanent receipt.</h2>
+          </div>
+          <p>
+            Below is the full round-trip for anchoring a prediction. The
+            response is small by design — the JSON lives with you; only the
+            hash goes on-chain.
+          </p>
+        </div>
+
+        <div class="demo">
+          <div class="code-card">
+            <div class="code-card-head">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="label">request.sh</span>
+            </div>
+<pre><code><span class="tok-c"># Anchor any JSON. Schema is up to you.</span>
+<span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/anchors \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{
+    "namespace": "acme-predictions",
+    "external_ref": "game-42:home-win",
+    "payload": {
+      "match_id": "nba-2026-04-15-BOS-LAL",
+      "model": "forecaster-v7",
+      "prediction": { "home_win": 0.63 },
+      "emitted_at": "2026-04-15T19:02:11Z"
+    }
+  }'</span></code></pre>
+          </div>
+
+          <div class="code-card">
+            <div class="code-card-head">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="label">response.json · 200 OK</span>
+            </div>
+<pre><code><span class="tok-p">{</span>
+  <span class="tok-v">"id"</span><span class="tok-p">:</span> <span class="tok-s">"anc_01JSA7K2G9Q4M8Y3H2B8D5R4Z0"</span><span class="tok-p">,</span>
+  <span class="tok-v">"namespace"</span><span class="tok-p">:</span> <span class="tok-s">"acme-predictions"</span><span class="tok-p">,</span>
+  <span class="tok-v">"external_ref"</span><span class="tok-p">:</span> <span class="tok-s">"game-42:home-win"</span><span class="tok-p">,</span>
+  <span class="tok-v">"commitment_hash"</span><span class="tok-p">:</span>
+    <span class="tok-s">"0x7b0a4c…e91f3d"</span><span class="tok-p">,</span>
+  <span class="tok-v">"chain_id"</span><span class="tok-p">:</span> <span class="tok-n">8453</span><span class="tok-p">,</span>
+  <span class="tok-v">"tx_hash"</span><span class="tok-p">:</span> <span class="tok-s">"0x9f2a…c4d1"</span><span class="tok-p">,</span>
+  <span class="tok-v">"block_number"</span><span class="tok-p">:</span> <span class="tok-n">18_421_003</span><span class="tok-p">,</span>
+  <span class="tok-v">"status"</span><span class="tok-p">:</span> <span class="tok-s">"confirmed"</span><span class="tok-p">,</span>
+  <span class="tok-v">"explorer_url"</span><span class="tok-p">:</span>
+    <span class="tok-s">"https://basescan.org/tx/0x9f2a…"</span><span class="tok-p">,</span>
+  <span class="tok-v">"created_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-04-15T19:02:14Z"</span>
+<span class="tok-p">}</span></code></pre>
+          </div>
+        </div>
+
+        <div class="callout callout-teal mt-3">
+          <div>
+            <strong>Verify without us.</strong>
+            Recompute <code>keccak256</code> of the canonical JSON, then load the
+            <code>tx_hash</code> from basescan and compare the calldata. If the
+            bytes match, the claim is authentic. statehash.io is convenient, but
+            not trusted — the chain is.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== why -->
+    <section id="why">
+      <div class="container-narrow">
+        <div class="section-title">
+          <div>
+            <span class="kicker">Why Base</span>
+            <h2>Cheap, fast, and public.</h2>
+          </div>
+        </div>
+        <div class="audience" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <article class="card">
+            <h3>~$0.0005 per anchor</h3>
+            <p>Commit millions of records without the hash ever becoming the bottleneck.</p>
+          </article>
+          <article class="card">
+            <h3>~2 second finality</h3>
+            <p>Returns a confirmed anchor inside a typical API round-trip budget.</p>
+          </article>
+          <article class="card">
+            <h3>Public explorer</h3>
+            <p>Every anchor is a basescan.org link you can hand to anyone.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================================== faq -->
+    <section id="faq">
+      <div class="container-narrow">
+        <div class="section-title">
+          <div>
+            <span class="kicker">FAQ</span>
+            <h2>Good questions.</h2>
+          </div>
+        </div>
+
+        <div class="faq">
+          <details>
+            <summary>What if statehash.io disappears?</summary>
+            <p>
+              The hashes are on Base. They do not depend on us. As long as
+              you've retained the original JSON, you can verify any anchor by
+              recomputing the hash and matching it against the on-chain
+              transaction — even if this service is offline.
+            </p>
+          </details>
+          <details>
+            <summary>Can I store PII or secrets in the payload?</summary>
+            <p>
+              Don't. Only the 32-byte hash is on-chain, but by default we also
+              store the canonical JSON server-side for lookup. You can opt out
+              with <code>store_payload: false</code> and keep the raw payload
+              yourself.
+            </p>
+          </details>
+          <details>
+            <summary>What's a "canonical" hash?</summary>
+            <p>
+              We sort object keys recursively, remove whitespace, and hash the
+              resulting UTF-8 bytes with keccak256. It guarantees
+              <code>{ "a": 1, "b": 2 }</code> and <code>{ "b": 2, "a": 1 }</code>
+              produce the same commitment. The algorithm is stable and
+              documented.
+            </p>
+          </details>
+          <details>
+            <summary>Which chains are supported?</summary>
+            <p>
+              Base (mainnet) and Base Sepolia (test) today. Additional chains
+              are on the roadmap once there is demand.
+            </p>
+          </details>
+          <details>
+            <summary>Is this open-source?</summary>
+            <p>
+              The canonicalization and verification are specified openly so you
+              can verify without trusting us. The server itself is in
+              preview — contact us if you need a self-hosted build.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== CTA -->
+    <section id="cta">
+      <div class="container-narrow" style="text-align:center;">
+        <h2 style="max-width: 20ch; margin: 0 auto 14px;">
+          Ship your next claim with a receipt.
+        </h2>
+        <p style="max-width: 52ch; margin: 0 auto 28px;">
+          We're onboarding a small number of teams on the preview tier. Tell us
+          what you'd anchor and we'll send you an API key.
+        </p>
+        <div class="row" style="justify-content: center;">
+          <a class="btn btn-primary" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">
+            Request an API key
+          </a>
+          <a class="btn btn-ghost" href="/docs">Read the docs</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ footer -->
+    <footer class="site">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>statehash<span class="brand-dot">.io</span></span>
+          </a>
+          <p class="mt-2" style="max-width: 38ch;">
+            Cryptographic receipts for your app's claims. Built on Base.
+          </p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#example">Live example</a></li>
+            <li><a href="/docs">API docs</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="mailto:hello@statehash.io">Contact</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="mailto:hello@statehash.io?subject=statehash.io%20partnership">Partnerships</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Status</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 statehash.io — preview release</span>
+        <span class="row">
+          <span class="pill pill-blue">Base · chain_id 8453</span>
+          <span class="pill pill-green">v1 preview</span>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
