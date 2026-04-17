@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Request an API key — statehash.io</title>
+    <meta
+      name="description"
+      content="Tell us what you'd anchor with statehash.io and we'll get back to you with an API key."
+    />
+    <meta name="theme-color" content="#0a0b0f" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <!-- ================================================================ nav -->
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>statehash<span class="brand-dot">.io</span></span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="/#audience">Who it's for</a>
+          <a href="/#agents">Agents</a>
+          <a href="/#how">How it works</a>
+          <a href="/docs">Docs</a>
+        </nav>
+        <a class="btn btn-ghost btn-sm nav-cta" href="/docs">Read the docs</a>
+      </div>
+    </header>
+
+    <main class="form-shell">
+      <div class="form-eyebrow">Request access</div>
+      <h1>Request an API key</h1>
+      <p class="form-lede">
+        We're onboarding a small group of teams while we harden the service.
+        Tell us a bit about what you'd anchor and we'll get back to you within
+        two business days.
+      </p>
+
+      <div class="form-card">
+        <div
+          id="form-error"
+          class="form-error"
+          role="alert"
+          aria-live="polite"
+        ></div>
+
+        <form id="request-form" novalidate>
+          <div class="field">
+            <label for="name">Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autocomplete="name"
+              required
+              maxlength="200"
+              placeholder="Ada Lovelace"
+            />
+          </div>
+
+          <div class="field">
+            <label for="email">Work email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              maxlength="320"
+              placeholder="you@yourcompany.com"
+            />
+          </div>
+
+          <div class="field">
+            <label for="company">
+              Company or team <span class="optional">optional</span>
+            </label>
+            <input
+              id="company"
+              name="company"
+              type="text"
+              autocomplete="organization"
+              maxlength="200"
+              placeholder="Acme Research"
+            />
+          </div>
+
+          <div class="field">
+            <label for="website">
+              Website <span class="optional">optional</span>
+            </label>
+            <input
+              id="website"
+              name="website"
+              type="url"
+              autocomplete="url"
+              maxlength="500"
+              placeholder="https://yourcompany.com"
+            />
+          </div>
+
+          <div class="field">
+            <label for="use_case">
+              What would you anchor?
+              <span class="optional">optional, short</span>
+            </label>
+            <textarea
+              id="use_case"
+              name="use_case"
+              maxlength="2000"
+              placeholder="e.g. AI sports-pick agent publishing one prediction per match, ~200/day."
+            ></textarea>
+            <span class="hint"
+              >Rough volume, shape of the payload, and why on-chain
+              timestamping matters to you.</span
+            >
+          </div>
+
+          <!-- Honeypot: real users never see this field. Bots fill it. -->
+          <div class="field field-honeypot" aria-hidden="true">
+            <label for="website_url">Website URL</label>
+            <input
+              id="website_url"
+              name="website_url"
+              type="text"
+              tabindex="-1"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button
+              id="submit-btn"
+              class="btn btn-primary"
+              type="submit"
+            >
+              Send request
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 5l7 7-7 7" />
+              </svg>
+            </button>
+            <span class="muted"
+              >We'll never share your details with third parties.</span
+            >
+          </div>
+        </form>
+
+        <div
+          id="form-success"
+          class="form-success"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="success-mark" aria-hidden="true">✓</div>
+          <h2>Thanks — we've got your request.</h2>
+          <p>
+            We review every request by hand and will reach out within two
+            business days. Until then, feel free to browse the API reference.
+          </p>
+          <div id="form-success-ref" class="ref"></div>
+          <div class="row" style="justify-content: center;">
+            <a class="btn btn-ghost btn-sm" href="/docs">Read the docs</a>
+            <a class="btn btn-ghost btn-sm" href="/">Back home</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============================================================= footer -->
+    <footer class="site">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>statehash<span class="brand-dot">.io</span></span>
+          </a>
+          <p class="mt-2" style="max-width: 38ch;">
+            Cryptographic receipts for your app's claims. Built on Base.
+          </p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/#how">How it works</a></li>
+            <li><a href="/#example">Live example</a></li>
+            <li><a href="/docs">API docs</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/request">Contact</a></li>
+            <li><a href="/#faq">FAQ</a></li>
+            <li><a href="/request">Partnerships</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© statehash.io</span>
+        <span>Running on Base</span>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var form = document.getElementById('request-form');
+        var errorBox = document.getElementById('form-error');
+        var successBox = document.getElementById('form-success');
+        var successRef = document.getElementById('form-success-ref');
+        var btn = document.getElementById('submit-btn');
+
+        function showError(msg) {
+          errorBox.textContent = msg;
+          errorBox.classList.add('is-visible');
+        }
+
+        function clearError() {
+          errorBox.textContent = '';
+          errorBox.classList.remove('is-visible');
+        }
+
+        function toPayload() {
+          var data = new FormData(form);
+          return {
+            name: (data.get('name') || '').toString().trim(),
+            email: (data.get('email') || '').toString().trim(),
+            company: (data.get('company') || '').toString().trim() || null,
+            website: (data.get('website') || '').toString().trim() || null,
+            use_case: (data.get('use_case') || '').toString().trim() || null,
+            website_url: (data.get('website_url') || '').toString(),
+            source: 'request-page',
+          };
+        }
+
+        form.addEventListener('submit', function (ev) {
+          ev.preventDefault();
+          clearError();
+
+          var payload = toPayload();
+          if (!payload.name) {
+            showError('Please enter your name.');
+            return;
+          }
+          if (!payload.email || payload.email.indexOf('@') === -1) {
+            showError('Please enter a valid email address.');
+            return;
+          }
+
+          btn.setAttribute('aria-busy', 'true');
+          btn.setAttribute('disabled', 'true');
+
+          fetch('/v1/api-key-requests', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+          })
+            .then(function (res) {
+              return res
+                .json()
+                .catch(function () {
+                  return {};
+                })
+                .then(function (body) {
+                  return {status: res.status, body: body};
+                });
+            })
+            .then(function (result) {
+              if (result.status >= 200 && result.status < 300) {
+                form.style.display = 'none';
+                if (result.body && result.body.id) {
+                  successRef.textContent = 'ref: ' + result.body.id;
+                } else {
+                  successRef.style.display = 'none';
+                }
+                successBox.classList.add('is-visible');
+                return;
+              }
+              if (result.status === 429) {
+                showError(
+                  "Too many requests from this address. Please try again in an hour."
+                );
+              } else if (
+                result.body &&
+                typeof result.body.error === 'string'
+              ) {
+                showError(result.body.error);
+              } else {
+                showError(
+                  'Something went wrong submitting your request. Please try again.'
+                );
+              }
+            })
+            .catch(function () {
+              showError(
+                "Couldn't reach the server. Check your connection and try again."
+              );
+            })
+            .then(function () {
+              btn.removeAttribute('aria-busy');
+              btn.removeAttribute('disabled');
+            });
+        });
+      })();
+    </script>
+  </body>
+</html>

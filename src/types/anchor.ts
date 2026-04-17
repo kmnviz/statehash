@@ -26,6 +26,11 @@ export interface Anchor {
 
   apiKeyName: string;
 
+  /** If submitted on behalf of an agent, the agent's id (agt_...). */
+  agentId: string | null;
+  /** Wallet that actually signed the tx (system signer or agent wallet). */
+  signerAddress: string;
+
   createdAt: Date;
   updatedAt: Date;
   confirmedAt: Date | null;
@@ -44,6 +49,8 @@ export interface AnchorResponse {
   block_number: number | null;
   block_time: number | null;
   explorer_url: string | null;
+  agent_id: string | null;
+  signer_address: string;
   created_at: string;
   confirmed_at: string | null;
   error?: string | null;

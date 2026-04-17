@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {requireApiKey} from '../../middleware/api-key-auth';
 import {
   AnchorSubmissionError,
+  AnchorValidationError,
   createAnchorSync,
   toAnchorResponse,
 } from '../../services/anchor.service';
@@ -31,6 +32,15 @@ const CreateAnchorSchema = z.object({
     .regex(/^[a-zA-Z0-9][a-zA-Z0-9_\-]*$/, {
       message: 'namespace must start with alphanum and contain only alphanum, _, -',
     })
+    .optional(),
+  /**
+   * Optional agent id (`agt_<ulid>`). When present, the anchor is signed from
+   * that agent's dedicated wallet instead of the shared system signer.
+   */
+  agent_id: z
+    .string()
+    .trim()
+    .regex(/^agt_[0-9A-HJKMNP-TV-Z]{26}$/, {message: 'agent_id must look like agt_<ulid>'})
     .optional(),
   store_payload: z.boolean().optional(),
   // Phase 4 fields: accepted for forward-compatibility but not handled yet.
@@ -71,9 +81,14 @@ router.post('/', async (req: Request, res: Response) => {
       namespace,
       storePayload: body.store_payload ?? true,
       apiKeyName: apiKey.name,
+      agentId: body.agent_id ?? null,
     });
     res.status(201).json(toAnchorResponse(anchor));
   } catch (err) {
+    if (err instanceof AnchorValidationError) {
+      res.status(err.status).json({error: err.message, code: err.code});
+      return;
+    }
     if (err instanceof AnchorSubmissionError) {
       res.status(502).json({
         error: 'anchor submission failed',

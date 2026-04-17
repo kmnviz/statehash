@@ -37,27 +37,40 @@ src/
 │   ├── not-found.ts
 │   └── request-logger.ts
 ├── models/
-│   └── anchor.model.ts    # mongoose schema for `anchors`
+│   ├── anchor.model.ts        # mongoose schema for `anchors`
+│   ├── agent.model.ts         # mongoose schema for `agents`
+│   └── signing-key.model.ts   # encrypted keys for agent wallets
 ├── repositories/
-│   └── anchor.repository.ts
+│   ├── anchor.repository.ts
+│   ├── agent.repository.ts
+│   └── signing-key.repository.ts
 ├── routes/
 │   ├── health.ts
 │   └── v1/
 │       ├── index.ts
-│       └── anchors.ts
+│       ├── anchors.ts
+│       └── agents.ts
 ├── services/
 │   ├── logger.ts          # winston (Cloud Run severity mapping)
 │   ├── canonical.ts       # canonicalJson + commitmentHash
-│   ├── signer.ts          # single system wallet (viem)
-│   ├── chain-tx.ts        # self-tx submission w/ nonce mutex
+│   ├── key-crypto.ts      # AES-256-GCM envelope for agent keys
+│   ├── signer.ts          # back-compat shim (re-exports systemSigner)
+│   ├── signer-pool.ts     # system + per-agent signer resolution
+│   ├── chain-tx.ts        # self-tx submission, per-wallet nonce mutex
 │   ├── anchor.service.ts  # create/read anchors
+│   ├── agent.service.ts   # create/read agents + public view
 │   └── api-key.ts         # STATEHASH_API_KEYS parser + lookup
 └── types/
     ├── anchor.ts
+    ├── agent.ts
     └── express.d.ts
 public/
-├── index.html             # landing page (served at /)
-└── style.css
+├── index.html             # marketing site (served at /)
+├── docs.html              # API documentation (served at /docs)
+├── css/site.css
+└── assets/favicon.svg
+scripts/
+└── serve-site.js          # zero-dep static server for public/
 ```
 
 ## Local development
@@ -84,7 +97,8 @@ Open `http://localhost:8080/` to see the landing page, or `/health` for status.
 | `MONGODB_DB_NAME` | no | Defaults to `statehash`. |
 | `STATEHASH_CHAIN_ID` | no | `8453` (Base mainnet, default) or `84532` (Base Sepolia). |
 | `STATEHASH_BASE_RPC_URL` | yes | Base RPC endpoint. |
-| `STATEHASH_SIGNER_PRIVATE_KEY` | yes | Single system wallet; self-tx pattern. Keep in Secret Manager in prod. |
+| `STATEHASH_SIGNER_PRIVATE_KEY` | yes | System wallet used when no `agent_id` is supplied. Keep in Secret Manager in prod. |
+| `STATEHASH_MASTER_KEY` | yes | 32-byte AES-256-GCM key, base64. Envelope-encrypts per-agent signing keys at rest. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. |
 | `STATEHASH_API_KEYS` | yes | Comma-separated `name:key:namespace` triples. |
 
 ## API (v1, sync mode)
@@ -139,6 +153,46 @@ curl -sS http://localhost:8080/v1/anchors/anc_01HW... \
 curl -sS "http://localhost:8080/v1/anchors/by-ref/doc:42" \
   -H "X-Api-Key: shk_dev_change_me"
 ```
+
+### Agents (wallet-per-actor)
+
+An agent is a named actor under your namespace with its own on-chain wallet.
+Anchors signed from an agent's wallet are enumerable directly off-chain —
+third parties can audit an agent's track record without hitting our API.
+
+Provision an agent (auth):
+
+```bash
+curl -sS -X POST http://localhost:8080/v1/agents \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: shk_dev_change_me" \
+  -d '{"display_name": "sniper-v7"}'
+```
+
+Anchor as an agent (auth):
+
+```bash
+curl -sS -X POST http://localhost:8080/v1/anchors \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: shk_dev_change_me" \
+  -d '{
+    "schema_version": 1,
+    "agent_id": "agt_01KPD5CTRE7HR9W5PXN6MPWJ2R",
+    "external_ref": "game-42",
+    "payload": { "pick": "home" }
+  }'
+```
+
+Public lookup — no API key required. This is the URL you give out so anyone
+can verify an agent's history on-chain:
+
+```bash
+curl -sS http://localhost:8080/v1/agents/agt_01KPD5CTRE7HR9W5PXN6MPWJ2R
+curl -sS http://localhost:8080/v1/agents/by-address/0xfe322ed9…b348cd
+```
+
+Response includes `address`, live `anchor_count`, `first_anchor_at`,
+`last_anchor_at`, and `explorer_url` pointing at the agent's basescan page.
 
 ### Not yet implemented (Phase 3+)
 

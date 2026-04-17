@@ -168,7 +168,10 @@ MongoDB collection `anchors`:
 
 ## Signer
 
-One single system wallet per environment (`STATEHASH_SIGNER_PRIVATE_KEY`), self-tx pattern (`to: signer`, `data: hash`). Keep it simple; the hash is what verifies, not the signer.
+Two tiers, both using the self-tx pattern (`to: signer`, `data: hash`):
+
+- **System signer** — `STATEHASH_SIGNER_PRIVATE_KEY`. Used when no `agent_id` is supplied. Cheap default for casual integrations; the hash is what verifies, not the signer.
+- **Agent signers** — Phase 2a. Each agent owns a unique wallet; the private key lives in Mongo encrypted with `STATEHASH_MASTER_KEY` (AES-256-GCM envelope). `resolveSigner()` looks up the agent, verifies namespace ownership, decrypts the key in memory, and caches the built bundle for subsequent anchors. Nonce management is per-wallet via a `Map<address, Promise>` mutex so different agents never block each other.
 
 ## Phases
 
@@ -207,6 +210,29 @@ One single system wallet per environment (`STATEHASH_SIGNER_PRIVATE_KEY`), self-
 - Deploy to Cloud Run on Base Sepolia; smoke test with curl; deploy mainnet.
 
 **Exit criteria:** a stranger landing on `statehash.io` sees what the product is and a working curl example. A developer holding an API key can `POST /v1/anchors` with any JSON payload and get back `{ id, commitment_hash, tx_hash, explorer_url }`. Smartbettors could already integrate against this in sync mode.
+
+### Phase 2a — Agents (wallet-per-actor)
+
+Added after Phase 2 when the single-system-signer model was identified as a hash-all-outcomes vulnerability for prediction-style use cases. An Agent is a named actor under a namespace (an AI model, an analyst team, a content publisher, a compliance reviewer) that gets its own on-chain wallet. Anchors signed from that wallet are enumerable off-platform via any Base RPC, so a verifier does not have to trust statehash.io to count an agent's claims.
+
+- `src/services/key-crypto.ts` — AES-256-GCM envelope encryption. Master key in `STATEHASH_MASTER_KEY` (32 bytes base64), sourced from Secret Manager on Cloud Run. `keyVersion` field persisted so we can migrate to Cloud KMS envelope encryption without a schema break.
+- Mongo collections `agents` (`_id` = `agt_<ulid>`, unique on `address`, unique on `(namespace, displayName)` when present) and `signing_keys` (encrypted private keys, 1:1 with agents).
+- `src/services/signer-pool.ts` — system signer plus `getAgentSigner(agentId)` with in-memory bundle cache; `resolveSigner(agentId, namespace)` enforces that the agent belongs to the caller's namespace before returning a bundle.
+- `src/services/chain-tx.ts` — per-wallet promise-chain mutex keyed by lowercased `address`. Parallel anchors for different agents no longer block each other; parallel anchors for the same agent serialize to avoid nonce collisions.
+- `POST /v1/anchors` accepts optional `agent_id`. When present, the tx is signed by that agent's wallet and the anchor is persisted with `agentId` + `signerAddress` for later enumeration.
+- `POST /v1/agents` (auth) provisions an agent, generating a fresh keypair and envelope-encrypting the private key before return.
+- `GET /v1/agents/:id` and `GET /v1/agents/by-address/:address` — **public, no auth**. Both return the same shape: id, namespace, display_name, address, chain_id, anchor_count, first/last anchor timestamps, explorer URL. This is the URL an agent hands to its users for independent auditing.
+- Gas funding: treasury wallet + manual top-up for v1. Automated sweeper (cron-style job that funds any agent below a threshold) deferred until volume justifies it.
+
+**Key management posture for this phase:** tier 1 — encrypted at rest in Mongo with the master key in the Cloud Run env / Secret Manager. A DB dump alone does not reveal any private key. Tier 2 (Cloud KMS envelope encryption) is the GA target; migration path is a background re-encryption pass, no API break.
+
+**What this phase does and does not solve:**
+
+- Does solve: total count of an agent's anchors is independently verifiable from basescan. A "hash all N outcomes" attack that posts decoy anchors is caught as soon as a user compares advertised count vs on-chain count.
+- Does not solve: shadow-wallet attacks (operator secretly runs a second agent and only publicizes the good one). Mitigation is off-chain identity binding — docs recommend publishing the agent address from the operator's domain / signed X post / other public identity channel.
+- Does not enforce: "one anchor per event". Deferred to a later phase where an optional `event_id` field (unique per agent) closes that loop.
+
+**Exit criteria:** a customer can provision an agent, anchor payloads signed from the agent's wallet, hand out a `statehash.io/v1/agents/:id` URL, and a third party with only a basescan tab can reproduce the agent's anchor count and verify individual claims.
 
 ### Phase 3 — Verification endpoint
 
@@ -267,7 +293,9 @@ Revisit once there's a second real user or smartbettors has scale:
 - **Signer address change.** New single signer has a different address than historical agent wallets. The hash still verifies; any UI that displays "signed by <agent>" needs to read that from the canonical payload, not from `tx.from`.
 - **PII in payloads.** Anchoring is immutable. The docs must state: callers MUST NOT submit PII inside `payload`. `store_payload=false` is provided for cases where the hash is useful but the payload should not be retained.
 - **Webhook DoS.** A misbehaving caller's `callback_url` (slow, 500, infinite redirect) must not stall the worker. 10 s timeout per attempt, hard cap on retries, circuit-break if a URL fails repeatedly.
-- **Nonce serialization.** One signer wallet + Cloud Run's concurrency = nonce collisions under load. Either serialize tx submission with a mutex (simple) or add a per-signer queue (better). Either is fine for smartbettors volume; both are cheap to add.
+- **Nonce serialization.** One signer wallet + Cloud Run's concurrency = nonce collisions under load. Solved in Phase 2a: a per-wallet promise-chain mutex in `chain-tx.ts` serializes submissions for each address independently. Different signers do not block each other; concurrent calls on the same signer queue in order.
+- **Master key blast radius.** Phase 2a stores agent keys encrypted with a single symmetric master key (`STATEHASH_MASTER_KEY`). DB dump alone is insufficient — the attacker also needs env / Secret Manager access. Migration to Cloud KMS envelope encryption is the GA target and does not require a schema break (the on-disk `keyVersion` field lets us roll forward row-by-row).
+- **Shadow agents.** Per-agent wallets make an agent's full on-chain count public, but they do not stop an operator from silently running a second agent and only advertising the first. Mitigation is off-chain: bind each `agent_id` to a public identity (domain, signed X post, on-chain registry entry). Consider shipping a "verified publisher" attestation flow once a customer asks for it.
 - **Backfill correctness.** If the hash of an imported historical record doesn't match what's onchain, the verify endpoint will lie. Recompute from the stored prediction fields and assert equality during import; reject mismatches.
 
 ## Open questions (resolve before Phase 2)

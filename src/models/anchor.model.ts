@@ -28,6 +28,9 @@ export interface AnchorDocument {
 
   apiKeyName: string;
 
+  agentId: string | null;
+  signerAddress: string;
+
   createdAt: Date;
   updatedAt: Date;
   confirmedAt: Date | null;
@@ -58,6 +61,9 @@ const anchorSchema = new Schema(
 
     apiKeyName: {type: String, required: true},
 
+    agentId: {type: String, default: null},
+    signerAddress: {type: String, required: true},
+
     confirmedAt: {type: Date, default: null},
   },
   {
@@ -79,6 +85,15 @@ anchorSchema.index(
 anchorSchema.index({commitmentHash: 1});
 anchorSchema.index({txHash: 1}, {sparse: true});
 anchorSchema.index({status: 1, updatedAt: 1});
+/**
+ * Enumerate anchors for an agent in reverse-chronological order — powers the
+ * public agent page and third-party verification scripts.
+ */
+anchorSchema.index(
+  {agentId: 1, createdAt: -1},
+  {partialFilterExpression: {agentId: {$type: 'string'}}}
+);
+anchorSchema.index({signerAddress: 1, createdAt: -1});
 
 const AnchorModel: Model<AnchorDocument> =
   (mongoose.models.Anchor as Model<AnchorDocument>) ||

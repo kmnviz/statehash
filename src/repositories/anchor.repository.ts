@@ -19,6 +19,8 @@ function toAnchor(doc: AnchorDocument): Anchor {
     status: doc.status,
     error: doc.error,
     apiKeyName: doc.apiKeyName,
+    agentId: doc.agentId,
+    signerAddress: doc.signerAddress,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     confirmedAt: doc.confirmedAt,
@@ -36,6 +38,8 @@ export interface InsertPendingInput {
   storePayload: boolean;
   chainId: number;
   apiKeyName: string;
+  agentId: string | null;
+  signerAddress: string;
 }
 
 export interface MarkConfirmedInput {
@@ -75,9 +79,28 @@ class AnchorRepository {
       status: 'pending' as AnchorStatus,
       error: null,
       apiKeyName: input.apiKeyName,
+      agentId: input.agentId,
+      signerAddress: input.signerAddress,
       confirmedAt: null,
     });
     return toAnchor(doc);
+  }
+
+  async countByAgentId(agentId: string): Promise<number> {
+    return AnchorModel.countDocuments({agentId}).exec();
+  }
+
+  async agentAnchorTimeRange(
+    agentId: string
+  ): Promise<{firstAt: Date | null; lastAt: Date | null}> {
+    const [first, last] = await Promise.all([
+      AnchorModel.findOne({agentId}).sort({createdAt: 1}).select({createdAt: 1}).lean().exec(),
+      AnchorModel.findOne({agentId}).sort({createdAt: -1}).select({createdAt: 1}).lean().exec(),
+    ]);
+    return {
+      firstAt: first?.createdAt ?? null,
+      lastAt: last?.createdAt ?? null,
+    };
   }
 
   async markConfirmed(id: string, input: MarkConfirmedInput): Promise<Anchor | null> {

@@ -1,5 +1,5 @@
 import type {Hex} from 'viem';
-import {signer} from './signer';
+import type {SignerBundle} from './signer-pool';
 import logger from './logger';
 
 export interface SubmittedTx {
@@ -9,24 +9,31 @@ export interface SubmittedTx {
 }
 
 /**
- * Simple promise-chain mutex that serializes tx submissions on the single
- * signer wallet. Without this, parallel requests race on nonce under Cloud
- * Run concurrency. Good enough for v1; swap for a per-signer queue if we
- * ever need higher throughput.
+ * Per-wallet promise-chain mutex. Viem's sendTransaction auto-fetches the
+ * nonce from the RPC, but under Cloud Run concurrency two parallel calls on
+ * the same wallet can still read the same nonce before either has broadcast.
+ * We serialize per-address so agent A's tx does not block agent B's tx.
  */
-let submitChain: Promise<unknown> = Promise.resolve();
-function withSubmitLock<T>(fn: () => Promise<T>): Promise<T> {
-  const next = submitChain.then(fn, fn);
-  submitChain = next.catch(() => undefined);
+const submitChains: Map<string, Promise<unknown>> = new Map();
+
+function withSubmitLock<T>(address: string, fn: () => Promise<T>): Promise<T> {
+  const key = address.toLowerCase();
+  const prev = submitChains.get(key) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  submitChains.set(
+    key,
+    next.catch(() => undefined)
+  );
   return next;
 }
 
 /**
- * Submit a self-tx that encodes `data` as calldata. The on-chain artifact is
- * the calldata byte string; the signer is irrelevant to verification.
+ * Submit a self-tx that encodes `data` as calldata from `signer`'s wallet.
+ * The on-chain artifact is the calldata byte string plus the `from` address —
+ * the latter is what makes agent anchors independently enumerable on-chain.
  */
-export function submitCommitmentTx(data: Hex): Promise<SubmittedTx> {
-  return withSubmitLock(async () => {
+export function submitCommitmentTx(signer: SignerBundle, data: Hex): Promise<SubmittedTx> {
+  return withSubmitLock(signer.account.address, async () => {
     const txHash = await signer.walletClient.sendTransaction({
       account: signer.account,
       to: signer.account.address,
@@ -39,7 +46,7 @@ export function submitCommitmentTx(data: Hex): Promise<SubmittedTx> {
     if (receipt.blockNumber == null) {
       throw new Error(`tx was not mined (missing blockNumber): ${txHash}`);
     }
-    const blockTime = await resolveBlockTimeSeconds(receipt.blockNumber, txHash);
+    const blockTime = await resolveBlockTimeSeconds(signer, receipt.blockNumber, txHash);
     return {
       txHash,
       blockNumber: Number(receipt.blockNumber),
@@ -48,12 +55,11 @@ export function submitCommitmentTx(data: Hex): Promise<SubmittedTx> {
   });
 }
 
-/**
- * Fetch block timestamp with short retries. Public RPCs are sometimes
- * eventually-consistent right after mining; fall back to wall clock if all
- * attempts fail so the anchor can still finalize with tx_hash + block_number.
- */
-async function resolveBlockTimeSeconds(blockNumber: bigint, txHash: Hex): Promise<number> {
+async function resolveBlockTimeSeconds(
+  signer: SignerBundle,
+  blockNumber: bigint,
+  txHash: Hex
+): Promise<number> {
   const delaysMs = [250, 750, 1500];
   let lastErr: unknown;
 

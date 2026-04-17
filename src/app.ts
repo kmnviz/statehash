@@ -9,6 +9,14 @@ import v1Router from './routes/v1';
 
 const app = express();
 
+/**
+ * Cloud Run and most reverse proxies place us behind their own hop, so the
+ * real client IP arrives in `X-Forwarded-For`. Trusting one hop is safe on
+ * Cloud Run (and no-op when running directly). The intake endpoint uses this
+ * for rate-limiting.
+ */
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json({limit: '2mb'}));
 app.use(express.urlencoded({extended: true, limit: '2mb'}));

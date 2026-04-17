@@ -36,12 +36,13 @@
         </a>
         <nav class="nav-links" aria-label="Primary">
           <a href="#audience">Who it's for</a>
+          <a href="#agents">Agents</a>
           <a href="#how">How it works</a>
           <a href="#example">Example</a>
           <a href="#faq">FAQ</a>
           <a href="/docs">Docs</a>
         </nav>
-        <a class="btn btn-primary btn-sm nav-cta" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">Request API key</a>
+        <a class="btn btn-primary btn-sm nav-cta" href="/request">Request API key</a>
       </div>
     </header>
 
@@ -58,11 +59,12 @@
         </h1>
         <p class="hero-lede">
           statehash.io turns any JSON payload into a timestamped, on-chain
-          receipt. Anchor once with a single HTTP call — anyone can verify it
-          forever, without an SDK, without an account, without us.
+          receipt, signed from your agent's own wallet. Anchor once with a
+          single HTTP call — anyone can enumerate and verify an agent's full
+          track record, without an SDK, without an account, without us.
         </p>
         <div class="hero-ctas">
-          <a class="btn btn-primary" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">
+          <a class="btn btn-primary" href="/request">
             Request an API key
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
@@ -174,6 +176,78 @@
               — KYC outcomes, risk scores, moderation calls, policy evaluations.
             </p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ agents -->
+    <section id="agents">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <span class="kicker">Agents · economic actors</span>
+            <h2>Every agent gets its own wallet.</h2>
+          </div>
+          <p>
+            An agent is a named actor that emits claims — an AI model, an
+            analyst team, a content publisher. On statehash.io, every agent is
+            provisioned with its own on-chain address. Their track record is
+            something anyone can enumerate directly from Base.
+          </p>
+        </div>
+
+        <div class="demo">
+          <div class="code-card">
+            <div class="code-card-head">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="label">provision.sh</span>
+            </div>
+<pre><code><span class="tok-c"># One call: generate keypair, store encrypted, return address.</span>
+<span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/agents \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -d <span class="tok-s">'{"display_name": "sniper-v7"}'</span>
+
+<span class="tok-c"># Anchor as the agent. Tx from 0xfe322ed9…, not a shared wallet.</span>
+<span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/anchors \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -d <span class="tok-s">'{
+    "agent_id": "agt_01KPD5…WJ2R",
+    "external_ref": "game-42",
+    "payload": { "prediction": { "home_win": 0.63 } }
+  }'</span></code></pre>
+          </div>
+          <div class="code-card">
+            <div class="code-card-head">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="dot" aria-hidden="true"></span>
+              <span class="label">GET /v1/agents/:id · no auth</span>
+            </div>
+<pre><code><span class="tok-p">{</span>
+  <span class="tok-v">"id"</span><span class="tok-p">:</span> <span class="tok-s">"agt_01KPD5CTRE…WJ2R"</span><span class="tok-p">,</span>
+  <span class="tok-v">"display_name"</span><span class="tok-p">:</span> <span class="tok-s">"sniper-v7"</span><span class="tok-p">,</span>
+  <span class="tok-v">"address"</span><span class="tok-p">:</span> <span class="tok-s">"0xfe322ed9…b348cd"</span><span class="tok-p">,</span>
+  <span class="tok-v">"chain_id"</span><span class="tok-p">:</span> <span class="tok-n">8453</span><span class="tok-p">,</span>
+  <span class="tok-v">"anchor_count"</span><span class="tok-p">:</span> <span class="tok-n">127</span><span class="tok-p">,</span>
+  <span class="tok-v">"first_anchor_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-02-03T…"</span><span class="tok-p">,</span>
+  <span class="tok-v">"last_anchor_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-04-15T…"</span><span class="tok-p">,</span>
+  <span class="tok-v">"explorer_url"</span><span class="tok-p">:</span>
+    <span class="tok-s">"https://basescan.org/address/0xfe322ed9…"</span>
+<span class="tok-p">}</span></code></pre>
+          </div>
+        </div>
+
+        <div class="callout callout-teal mt-3">
+          <div>
+            <strong>Why this kills "hash all outcomes".</strong>
+            An agent can't secretly pre-commit every possible prediction and
+            reveal only the winning one — every transaction from the agent's
+            address is public. If the on-chain count exceeds the claimed
+            count, the selective disclosure is visible to anyone with an RPC
+            endpoint.
+          </div>
         </div>
       </div>
     </section>
@@ -394,7 +468,7 @@
           what you'd anchor and we'll send you an API key.
         </p>
         <div class="row" style="justify-content: center;">
-          <a class="btn btn-primary" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">
+          <a class="btn btn-primary" href="/request">
             Request an API key
           </a>
           <a class="btn btn-ghost" href="/docs">Read the docs</a>
@@ -425,9 +499,9 @@
         <div>
           <h4>Company</h4>
           <ul>
-            <li><a href="mailto:hello@statehash.io">Contact</a></li>
+            <li><a href="/request">Contact</a></li>
             <li><a href="#faq">FAQ</a></li>
-            <li><a href="mailto:hello@statehash.io?subject=statehash.io%20partnership">Partnerships</a></li>
+            <li><a href="/request">Partnerships</a></li>
           </ul>
         </div>
         <div>

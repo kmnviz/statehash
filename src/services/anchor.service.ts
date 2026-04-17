@@ -2,7 +2,7 @@ import {ulid} from 'ulid';
 import type {Hex} from 'viem';
 import {canonicalJson, commitmentHash, type CanonicalJsonValue} from './canonical';
 import {explorerTxUrl} from '../config/chains';
-import {signer} from './signer';
+import {resolveSigner, AgentResolveError} from './signer-pool';
 import {submitCommitmentTx} from './chain-tx';
 import {anchorRepository} from '../repositories/anchor.repository';
 import type {Anchor, AnchorResponse} from '../types/anchor';
@@ -17,6 +17,21 @@ export class AnchorSubmissionError extends Error {
   }
 }
 
+export class AnchorValidationError extends Error {
+  public readonly code: 'agent_not_found' | 'agent_namespace_mismatch';
+  public readonly status: number;
+  constructor(
+    message: string,
+    code: 'agent_not_found' | 'agent_namespace_mismatch',
+    status: number
+  ) {
+    super(message);
+    this.name = 'AnchorValidationError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
 export interface CreateAnchorInput {
   payload: CanonicalJsonValue;
   schemaVersion: number;
@@ -24,6 +39,8 @@ export interface CreateAnchorInput {
   namespace: string;
   storePayload: boolean;
   apiKeyName: string;
+  /** Optional — when present, the anchor is signed from the agent's wallet. */
+  agentId: string | null;
 }
 
 function newAnchorId(): string {
@@ -43,6 +60,8 @@ export function toAnchorResponse(anchor: Anchor): AnchorResponse {
     block_number: anchor.blockNumber,
     block_time: anchor.blockTime,
     explorer_url: anchor.txHash ? explorerTxUrl(anchor.chainId, anchor.txHash as Hex) : null,
+    agent_id: anchor.agentId,
+    signer_address: anchor.signerAddress,
     created_at: anchor.createdAt.toISOString(),
     confirmed_at: anchor.confirmedAt ? anchor.confirmedAt.toISOString() : null,
     ...(anchor.error ? {error: anchor.error} : {}),
@@ -50,8 +69,9 @@ export function toAnchorResponse(anchor: Anchor): AnchorResponse {
 }
 
 /**
- * Sync-mode create: canonicalize, hash, submit, wait for receipt, persist.
- * Idempotent on `(namespace, externalRef)` when externalRef is provided.
+ * Sync-mode create: resolve signer (system or per-agent), canonicalize, hash,
+ * submit, wait for receipt, persist. Idempotent on (namespace, externalRef)
+ * when externalRef is provided.
  */
 export async function createAnchorSync(input: CreateAnchorInput): Promise<Anchor> {
   const canonical = canonicalJson(input.payload);
@@ -73,6 +93,19 @@ export async function createAnchorSync(input: CreateAnchorInput): Promise<Anchor
     }
   }
 
+  let signer;
+  try {
+    signer = await resolveSigner(input.agentId, input.namespace);
+  } catch (err) {
+    if (err instanceof AgentResolveError) {
+      if (err.code === 'agent_not_found') {
+        throw new AnchorValidationError(err.message, 'agent_not_found', 404);
+      }
+      throw new AnchorValidationError(err.message, 'agent_namespace_mismatch', 403);
+    }
+    throw err;
+  }
+
   const id = newAnchorId();
   let pending: Anchor;
   try {
@@ -87,6 +120,8 @@ export async function createAnchorSync(input: CreateAnchorInput): Promise<Anchor
       storePayload: input.storePayload,
       chainId: signer.chainId,
       apiKeyName: input.apiKeyName,
+      agentId: input.agentId,
+      signerAddress: signer.account.address.toLowerCase(),
     });
   } catch (err) {
     if (input.externalRef && isDuplicateKeyError(err)) {
@@ -100,7 +135,7 @@ export async function createAnchorSync(input: CreateAnchorInput): Promise<Anchor
   }
 
   try {
-    const submitted = await submitCommitmentTx(hash);
+    const submitted = await submitCommitmentTx(signer, hash);
     const confirmed = await anchorRepository.markConfirmed(pending.id, {
       txHash: submitted.txHash,
       blockNumber: submitted.blockNumber,
@@ -112,6 +147,7 @@ export async function createAnchorSync(input: CreateAnchorInput): Promise<Anchor
     const message = err instanceof Error ? err.message : String(err);
     logger.error('Sync anchor failed', {
       id: pending.id,
+      agentId: input.agentId,
       error: err instanceof Error ? err.stack || err.message : message,
     });
     await anchorRepository.markFailed(pending.id, message);

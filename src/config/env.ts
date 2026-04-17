@@ -31,6 +31,24 @@ const envSchema = z.object({
     .string()
     .regex(/^0x[0-9a-fA-F]{64}$/, 'STATEHASH_SIGNER_PRIVATE_KEY must be 0x-prefixed 32-byte hex'),
   /**
+   * 32-byte master key, base64-encoded. Used to envelope-encrypt per-agent
+   * signing keys at rest (AES-256-GCM). Never logged, never stored in Mongo.
+   * In Cloud Run this is sourced from Secret Manager.
+   */
+  STATEHASH_MASTER_KEY: z
+    .string()
+    .min(1, 'STATEHASH_MASTER_KEY is required')
+    .refine(
+      (val) => {
+        try {
+          return Buffer.from(val, 'base64').length === 32;
+        } catch {
+          return false;
+        }
+      },
+      {message: 'STATEHASH_MASTER_KEY must be 32 bytes base64-encoded'}
+    ),
+  /**
    * Comma-separated `name:key:namespace` triples.
    * Example: `smartbettors:shk_abc:smartbettors,acme:shk_xyz:acme-prod`
    */

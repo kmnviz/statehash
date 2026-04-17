@@ -32,7 +32,7 @@
           <a href="/#example">Example</a>
           <a href="/docs" class="is-active">Docs</a>
         </nav>
-        <a class="btn btn-primary btn-sm nav-cta" href="mailto:hello@statehash.io?subject=statehash.io%20API%20key">Request API key</a>
+        <a class="btn btn-primary btn-sm nav-cta" href="/request">Request API key</a>
       </div>
     </header>
 
@@ -55,6 +55,16 @@
             <li><a href="#canonicalization">Canonicalization</a></li>
             <li><a href="#commitment-hash">Commitment hash</a></li>
             <li><a href="#lifecycle">Anchor lifecycle</a></li>
+          </ul>
+        </div>
+        <div class="group">
+          <div class="group-title">Agents</div>
+          <ul>
+            <li><a href="#agents-overview">What is an agent?</a></li>
+            <li><a href="#post-agents"><code>POST</code> /v1/agents</a></li>
+            <li><a href="#get-agent-id"><code>GET</code> /v1/agents/:id</a></li>
+            <li><a href="#get-agent-address"><code>GET</code> /v1/agents/by-address/:addr</a></li>
+            <li><a href="#agent-integrity">Why wallet-per-agent</a></li>
           </ul>
         </div>
         <div class="group">
@@ -111,7 +121,7 @@
         <!-- ================================================ quickstart -->
         <h2 id="quickstart">Quickstart</h2>
         <ol>
-          <li><a href="mailto:hello@statehash.io">Request an API key</a>. You'll be assigned a namespace.</li>
+          <li><a href="/request">Request an API key</a>. You'll be assigned a namespace.</li>
           <li>POST your first payload to <code>/v1/anchors</code>.</li>
           <li>Inspect the response. Follow the basescan link. You're done.</li>
         </ol>
@@ -208,6 +218,153 @@ Authorization: Bearer sk_live_...</code></pre>
           is on the roadmap.
         </p>
 
+        <!-- =============================================== agents: intro -->
+        <h2 id="agents-overview">What is an agent?</h2>
+        <p>
+          An <strong>agent</strong> is a named actor under your namespace that
+          emits claims — an AI model, an analyst team, a content publisher, a
+          compliance reviewer. Every agent is provisioned with its own on-chain
+          wallet. When you anchor a payload "as" an agent, the transaction is
+          signed by <em>that agent's</em> wallet, not a shared one.
+        </p>
+        <p>
+          This is the primitive that makes an agent's track record
+          independently auditable. A third party can point a Base RPC at the
+          agent's address, enumerate every transaction, and hash every
+          payload themselves — without ever calling statehash.io.
+        </p>
+
+        <div class="callout callout-accent">
+          <div>
+            <strong>Agents are optional.</strong>
+            If you omit <code>agent_id</code> on <code>POST /v1/anchors</code>,
+            the anchor is signed by the shared system signer — the v0
+            behaviour. Use agents when you want per-actor enumeration on-chain.
+          </div>
+        </div>
+
+        <!-- =============================================== POST /v1/agents -->
+        <h2 id="post-agents">Provision an agent</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <span>/v1/agents</span>
+        </div>
+        <p>
+          Generates a fresh secp256k1 keypair, envelope-encrypts the private
+          key, and returns the agent with its on-chain <code>address</code>.
+          The private key never leaves the server.
+        </p>
+
+        <h3>Body parameters</h3>
+        <table class="param-table">
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>namespace</code></td>
+              <td>string</td>
+              <td>Optional. Defaults to the namespace bound to your API key; if supplied it must match.</td>
+            </tr>
+            <tr>
+              <td><code>display_name</code></td>
+              <td>string</td>
+              <td>Optional stable label (e.g. <code>sniper-v7</code>). Unique within a namespace. Convenient for humans; the ULID id is the canonical handle.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example request</h3>
+<pre><code><span class="tok-k">curl</span> -X POST https://api.statehash.io/v1/agents \
+  -H <span class="tok-s">"X-Api-Key: $STATEHASH_API_KEY"</span> \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"display_name": "sniper-v7"}'</span></code></pre>
+
+        <h3>Example response</h3>
+<pre><code><span class="tok-p">{</span>
+  <span class="tok-v">"id"</span><span class="tok-p">:</span> <span class="tok-s">"agt_01KPD5CTRE7HR9W5PXN6MPWJ2R"</span><span class="tok-p">,</span>
+  <span class="tok-v">"namespace"</span><span class="tok-p">:</span> <span class="tok-s">"acme-predictions"</span><span class="tok-p">,</span>
+  <span class="tok-v">"display_name"</span><span class="tok-p">:</span> <span class="tok-s">"sniper-v7"</span><span class="tok-p">,</span>
+  <span class="tok-v">"address"</span><span class="tok-p">:</span> <span class="tok-s">"0xfe322ed9…b348cd"</span><span class="tok-p">,</span>
+  <span class="tok-v">"chain_id"</span><span class="tok-p">:</span> <span class="tok-n">8453</span><span class="tok-p">,</span>
+  <span class="tok-v">"explorer_url"</span><span class="tok-p">:</span> <span class="tok-s">"https://basescan.org/address/0xfe322ed9…"</span><span class="tok-p">,</span>
+  <span class="tok-v">"anchor_count"</span><span class="tok-p">:</span> <span class="tok-n">0</span><span class="tok-p">,</span>
+  <span class="tok-v">"first_anchor_at"</span><span class="tok-p">:</span> <span class="tok-k">null</span><span class="tok-p">,</span>
+  <span class="tok-v">"last_anchor_at"</span><span class="tok-p">:</span> <span class="tok-k">null</span><span class="tok-p">,</span>
+  <span class="tok-v">"created_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-04-16T19:02:14Z"</span><span class="tok-p">,</span>
+  <span class="tok-v">"updated_at"</span><span class="tok-p">:</span> <span class="tok-s">"2026-04-16T19:02:14Z"</span>
+<span class="tok-p">}</span></code></pre>
+
+        <div class="callout callout-teal mt-3">
+          <div>
+            <strong>Gas funding.</strong>
+            New agents start with a zero balance. Until an agent wallet has a
+            small amount of ETH on Base, its anchors will fail. In the preview
+            tier we top up from a shared treasury automatically; for now, tell
+            us the address and we'll fund it.
+          </div>
+        </div>
+
+        <!-- ========================================= GET /v1/agents/:id -->
+        <h2 id="get-agent-id">Fetch an agent</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span>/v1/agents/:id</span>
+        </div>
+        <p>
+          <strong>Public endpoint — no API key required.</strong>
+          Returns the agent record with live anchor count and activity window.
+          This is the URL you hand out so anyone can audit an agent's history.
+        </p>
+<pre><code><span class="tok-k">curl</span> https://api.statehash.io/v1/agents/agt_01KPD5CTRE7HR9W5PXN6MPWJ2R</code></pre>
+
+        <!-- ======================================= GET /v1/agents/by-address -->
+        <h2 id="get-agent-address">Resolve an agent by wallet address</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span>/v1/agents/by-address/:address</span>
+        </div>
+        <p>
+          <strong>Public endpoint — no API key required.</strong>
+          Given a 0x-prefixed Ethereum address, returns the agent it belongs to
+          (or 404 if the address is not one of ours). Useful when you have a
+          basescan URL in hand and want to cross-reference the agent id.
+        </p>
+
+        <!-- ============================================ agent integrity -->
+        <h2 id="agent-integrity">Why wallet-per-agent</h2>
+        <p>
+          Without per-agent wallets, nothing on-chain distinguishes one
+          customer's anchors from another's — they all come from the same
+          system signer. That's fine for integrity of any <em>single</em>
+          anchor, but it breaks down when a verifier needs to ask "how many
+          predictions has this agent ever made?". They'd have to trust us.
+        </p>
+        <p>
+          With per-agent wallets, a verifier can answer that question directly:
+        </p>
+        <ol>
+          <li>Look up the agent: <code>GET /v1/agents/:id</code> → get <code>address</code>.</li>
+          <li>Query Base for all transactions sent from that address.</li>
+          <li>For each tx, decode the calldata — it's the raw commitment hash.</li>
+          <li>Compare against the payloads the agent claims to have published.</li>
+        </ol>
+        <p>
+          If the numbers match, the agent has no hidden anchors. If the
+          on-chain count exceeds the claimed count, some predictions were
+          suppressed — selective disclosure detected.
+        </p>
+        <div class="callout callout-accent">
+          <div>
+            <strong>Limitations.</strong>
+            Per-agent wallets expose an agent's full on-chain count. They do
+            not, by themselves, prevent an operator from running a second
+            "shadow" agent and only advertising the good one. Bind each
+            <code>agent_id</code> to a public identity (your domain, a signed
+            X post, a registry) to close that gap.
+          </div>
+        </div>
+
         <!-- ============================================= POST /v1/anchors -->
         <h2 id="post-anchors">Create an anchor</h2>
         <div class="endpoint">
@@ -235,6 +392,11 @@ Authorization: Bearer sk_live_...</code></pre>
               <td><code>payload</code><span class="req">required</span></td>
               <td>any JSON</td>
               <td>Arbitrary JSON. Object, array, string, number, boolean, or null. Schema is entirely up to you.</td>
+            </tr>
+            <tr>
+              <td><code>agent_id</code></td>
+              <td>string</td>
+              <td>Optional. If present, the tx is signed by that agent's wallet. The agent must belong to the caller's namespace. See <a href="#agents-overview">Agents</a>.</td>
             </tr>
             <tr>
               <td><code>store_payload</code></td>
@@ -342,6 +504,8 @@ Authorization: Bearer sk_live_...</code></pre>
             <tr><td><code>block_number</code></td><td>number</td><td>Block that mined the tx. Present on <code>confirmed</code>.</td></tr>
             <tr><td><code>status</code></td><td>string</td><td>One of <code>accepted</code>, <code>pending</code>, <code>confirmed</code>, <code>failed</code>.</td></tr>
             <tr><td><code>explorer_url</code></td><td>string</td><td>Human-facing basescan URL.</td></tr>
+            <tr><td><code>agent_id</code></td><td>string</td><td>The agent whose wallet signed the tx, or <code>null</code> for the system signer.</td></tr>
+            <tr><td><code>signer_address</code></td><td>string</td><td>The wallet address that actually sent the transaction (always populated).</td></tr>
             <tr><td><code>payload</code></td><td>any</td><td>Original JSON, if <code>store_payload</code> wasn't set to <code>false</code>.</td></tr>
             <tr><td><code>metadata</code></td><td>object</td><td>Free-form caller metadata. Not hashed.</td></tr>
             <tr><td><code>created_at</code></td><td>string</td><td>ISO-8601 timestamp.</td></tr>
@@ -367,8 +531,11 @@ Authorization: Bearer sk_live_...</code></pre>
             <tr><td>401</td><td><code>missing_api_key</code></td><td>No API key header provided.</td></tr>
             <tr><td>403</td><td><code>invalid_api_key</code></td><td>Key not recognized.</td></tr>
             <tr><td>403</td><td><code>namespace_mismatch</code></td><td>Key is not authorized for that namespace.</td></tr>
+            <tr><td>403</td><td><code>agent_namespace_mismatch</code></td><td><code>agent_id</code> belongs to a different namespace than the caller.</td></tr>
             <tr><td>404</td><td><code>not_found</code></td><td>Anchor does not exist under this namespace.</td></tr>
+            <tr><td>404</td><td><code>agent_not_found</code></td><td><code>agent_id</code> does not exist.</td></tr>
             <tr><td>409</td><td><code>external_ref_conflict</code></td><td>external_ref exists with a different payload hash.</td></tr>
+            <tr><td>409</td><td><code>display_name_taken</code></td><td>Agent <code>display_name</code> already exists in namespace.</td></tr>
             <tr><td>500</td><td><code>internal_error</code></td><td>Something on our side. Retry-safe.</td></tr>
           </tbody>
         </table>
@@ -391,7 +558,7 @@ Authorization: Bearer sk_live_...</code></pre>
           <div>
             <strong>Need something not here?</strong>
             Webhooks, async mode, batch anchoring, and self-hosted builds are
-            on the roadmap — email <a href="mailto:hello@statehash.io">hello@statehash.io</a> and tell us what you need.
+            on the roadmap — <a href="/request">tell us what you need</a> and we'll prioritise it.
           </div>
         </div>
       </main>
@@ -420,9 +587,9 @@ Authorization: Bearer sk_live_...</code></pre>
         <div>
           <h4>Company</h4>
           <ul>
-            <li><a href="mailto:hello@statehash.io">Contact</a></li>
+            <li><a href="/request">Contact</a></li>
             <li><a href="/#faq">FAQ</a></li>
-            <li><a href="mailto:hello@statehash.io?subject=statehash.io%20partnership">Partnerships</a></li>
+            <li><a href="/request">Partnerships</a></li>
           </ul>
         </div>
         <div>
